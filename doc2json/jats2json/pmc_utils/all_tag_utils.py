@@ -14,12 +14,10 @@ ALL_TOKENS = START_TOKENS | SEP_TOKENS | END_TOKENS
 def replace_xref_with_string_placeholders(soup_tag, soup):
     # replace all xref tags with string placeholders
     for xref_tag in soup_tag.find_all("xref"):
-        rid = xref_tag['rid'] if 'rid' in xref_tag.attrs else None
-        ref_type = xref_tag['ref-type'] if 'ref-type' in xref_tag.attrs else None
+        rid = xref_tag["rid"] if "rid" in xref_tag.attrs else None
+        ref_type = xref_tag["ref-type"] if "ref-type" in xref_tag.attrs else None
         xref_tag.replace_with(
-            soup.new_string(
-                f"#!start#{xref_tag.text}#!sep#{rid}#!sep#{ref_type}#!end#"
-            )
+            soup.new_string(f"#!start#{xref_tag.text}#!sep#{rid}#!sep#{ref_type}#!end#")
         )
 
 
@@ -36,11 +34,11 @@ def recurse_parse_section(
     # suppl_blobs: Dict
 ) -> List[Dict]:
     """Recursive function for getting paragraph blobs to look like
-        {
-            'text': ...,
-            ...,
-            'section': SUBSUBSECTION_NAME :: SUBSECTION_NAME :: SECTION_NAME
-        }
+    {
+        'text': ...,
+        ...,
+        'section': SUBSUBSECTION_NAME :: SUBSECTION_NAME :: SECTION_NAME
+    }
     """
     subsections = sec_tag.find_all("sec", recursive=False)
     if not subsections:
@@ -56,7 +54,7 @@ def recurse_parse_section(
             for blob in child_blobs:
                 # PMC373254 - process blob['section'] to remove any span markers left in there
                 for t in ALL_TOKENS:
-                    blob['section'] = blob['section'].replace(t, '')
+                    blob["section"] = blob["section"].replace(t, "")
                 blob["section"] = blob["section"] + " :: " + sec_tag.find("title").text
             outputs.extend(child_blobs)
         return outputs
@@ -64,11 +62,11 @@ def recurse_parse_section(
 
 def _reduce_args(stack: List, end_token: str) -> List[List]:
     """Helper function for `_parse_all_paragraphs_in_section`.
-    
+
     Pop arguments for the xref off the top of the stack and return a list of argument lists,
     where the outer lists represent groups divided by separators."""
-    start_token = end_token.replace('end', 'start')
-    sep_token = end_token.replace('end', 'sep')
+    start_token = end_token.replace("end", "start")
+    sep_token = end_token.replace("end", "sep")
     args = [[]]
     while True:
         token = stack.pop()
@@ -120,41 +118,33 @@ def _add_spans(
             sub_spans.append(blob)
 
 
-def get_latex_from_formula(
-    formula_tag
-):
-    if formula_tag.find('tex-math'):
-        latex_text = formula_tag.find('tex-math').text
-        match = re.search(r'\\begin\{document\}(.+)\\end\{document\}', latex_text)
+def get_latex_from_formula(formula_tag):
+    if formula_tag.find("tex-math"):
+        latex_text = formula_tag.find("tex-math").text
+        match = re.search(r"\\begin\{document\}(.+)\\end\{document\}", latex_text)
         if match:
-            return match.group(1).strip('$')
+            return match.group(1).strip("$")
     return None
 
 
-def get_mathml_from_formula(
-    formula_tag
-):
-    if formula_tag.find('mml:math'):
-        return str(formula_tag.find('mml:math'))
+def get_mathml_from_formula(formula_tag):
+    if formula_tag.find("mml:math"):
+        return str(formula_tag.find("mml:math"))
     return None
 
 
-def parse_formulas(
-    para_el,
-    sp,
-    replace
-):
+def parse_formulas(para_el, sp, replace):
     # sub and get corresponding spans of inline formulas
     formula_dict = dict()
     eq_ind = 0
-    for ftag in para_el.find_all('inline-formula'):
+    for ftag in para_el.find_all("inline-formula"):
         try:
-            formula_key = f'INLINEFORM{eq_ind}'
+            formula_key = f"INLINEFORM{eq_ind}"
             eq_ind += 1
             try:
-                formula_text = ftag.find('mml:math').text
+                formula_text = ftag.find("mml:math").text
             except:
-                if 'begin{document}' not in ftag.text:
+                if "begin{document}" not in ftag.text:
                     formula_text = ftag.text
                 else:
                     formula_text = "FORMULA"
@@ -162,12 +152,17 @@ def parse_formulas(
             formula_mathml = get_mathml_from_formula(ftag)
             if not formula_mathml and formula_latex:
                 formula_mathml = latex2mathml.converter.convert(formula_latex)
-            formula_dict[formula_key] = (formula_text, formula_latex, formula_mathml, ftag.get('id'))
+            formula_dict[formula_key] = (
+                formula_text,
+                formula_latex,
+                formula_mathml,
+                ftag.get("id"),
+            )
             if replace:
                 ftag.replace_with(sp.new_string(f" {formula_key} "))
             else:
                 # replace with mathml text if available
-                if formula_text != 'FORMULA':
+                if formula_text != "FORMULA":
                     ftag.replace_with(sp.new_string(f" {formula_text} "))
         except AttributeError:
             continue
@@ -176,15 +171,13 @@ def parse_formulas(
 
 
 def parse_all_paragraphs_in_section(
-    sec_tag,
-    par_to_text: Callable = None,
-    replace_formula=True
+    sec_tag, par_to_text: Callable = None, replace_formula=True
 ) -> List[Dict]:
     """Internal function. Assumes section has no nested tags
     `par_to_text` is an optional function that converts the `par` tag into a string.  by default, calls `par_tag.text`.
     """
     outputs = []
-    sp = BeautifulSoup('', 'lxml')
+    sp = BeautifulSoup("", "lxml")
     for par_tag in sec_tag.find_all("p", recursive=True):
         cite_spans = []
         fig_spans = []
@@ -194,11 +187,11 @@ def parse_all_paragraphs_in_section(
         sub_spans = []
         eq_spans = []
 
-        if par_tag.find('display-formula'):
-            raise NotImplementedError('Display formula!')
+        if par_tag.find("display-formula"):
+            raise NotImplementedError("Display formula!")
 
-        if par_tag.find('formula'):
-            raise NotImplementedError('Formula!')
+        if par_tag.find("formula"):
+            raise NotImplementedError("Formula!")
 
         formula_dict = parse_formulas(par_tag, sp, replace_formula)
 
@@ -206,12 +199,12 @@ def parse_all_paragraphs_in_section(
         par_text = re.sub(
             r"[^\S\n\t]", " ", par_text
         )  # replaces whitespace but not newline or tab
-        par_text = re.sub(
-            r"  ", " ", par_text
-        )  # replaces two spaces w/ one
+        par_text = re.sub(r"  ", " ", par_text)  # replaces two spaces w/ one
 
         # Tokenize the text into normal text and special placeholder tokens.
-        pattern = r"(#!start#)|(#!sep#)|(#!end#)|(@!start@)|(@!end@)|(&!start&)|(&!end&)"
+        pattern = (
+            r"(#!start#)|(#!sep#)|(#!end#)|(@!start@)|(@!end@)|(&!start&)|(&!end&)"
+        )
         tokens = [tok for tok in re.split(pattern, par_text) if tok]
 
         # To handle nested structures, use a shift-reduce algorithm to consume the text. Placeholder tags are merged away, and related spans are registered.
@@ -223,7 +216,7 @@ def parse_all_paragraphs_in_section(
             if token in START_TOKENS:
                 stack.append(token)
                 stack.append(pos)
-                stack.append(token.replace('start', 'sep'))
+                stack.append(token.replace("start", "sep"))
             elif token in SEP_TOKENS:
                 assert stack
                 stack.append(token)
@@ -268,32 +261,34 @@ def parse_all_paragraphs_in_section(
         # get all equation spans
         eq_spans = []
         for span in itertools.chain(
-                re.finditer(r'(INLINEFORM\d+)', full_text),
-                re.finditer(r'(DISPLAYFORM\d+)', full_text)
+            re.finditer(r"(INLINEFORM\d+)", full_text),
+            re.finditer(r"(DISPLAYFORM\d+)", full_text),
         ):
             try:
                 matching_formula = formula_dict[span.group()]
-                eq_spans.append({
-                    "start": span.start(),
-                    "end": span.start() + len(span.group()),
-                    "text": matching_formula[0],
-                    "latex": matching_formula[1],
-                    "mathml": matching_formula[2],
-                    "ref_id": span.group()
-                })
+                eq_spans.append(
+                    {
+                        "start": span.start(),
+                        "end": span.start() + len(span.group()),
+                        "text": matching_formula[0],
+                        "latex": matching_formula[1],
+                        "mathml": matching_formula[2],
+                        "ref_id": span.group(),
+                    }
+                )
             except KeyError:
                 continue
 
         outputs.append(
             {
                 "text": full_text,
-                'cite_spans': cite_spans,
-                'fig_spans': fig_spans,
-                'table_spans': table_spans,
+                "cite_spans": cite_spans,
+                "fig_spans": fig_spans,
+                "table_spans": table_spans,
                 # 'suppl_spans': suppl_spans,
-                'sup_spans': sup_spans,
-                'sub_spans': sub_spans,
-                'eq_spans': eq_spans,
+                "sup_spans": sup_spans,
+                "sub_spans": sub_spans,
+                "eq_spans": eq_spans,
                 "section": title,
             }
         )

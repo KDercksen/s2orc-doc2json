@@ -14,9 +14,15 @@ class SppClient:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Client for ScienceParsePlus (SPP) services")
-    parser.add_argument("--input", default=None, help="path to the directory containing PDF to process")
-    parser.add_argument("--output", default=None, help="path to the directory where to put the results")
+    parser = argparse.ArgumentParser(
+        description="Client for ScienceParsePlus (SPP) services"
+    )
+    parser.add_argument(
+        "--input", default=None, help="path to the directory containing PDF to process"
+    )
+    parser.add_argument(
+        "--output", default=None, help="path to the directory where to put the results"
+    )
     args = parser.parse_args()
 
     input_path = args.input
